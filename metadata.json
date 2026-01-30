@@ -1,0 +1,7 @@
+{
+  "name": "EquiAI - Elite Equestrian Coach",
+  "description": "An advanced AI-powered equestrian coaching platform using computer vision to analyze rider posture, horse biomechanics, and training progress.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
