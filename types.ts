@@ -1,4 +1,6 @@
 
+export type Language = 'English' | 'Spanish' | 'German' | 'French' | 'Italian' | 'Portuguese' | 'Arabic' | 'Mandarin' | 'Japanese' | 'Dutch';
+
 export interface AnalysisResult {
   summary: string;
   riderFeedback: {
@@ -52,6 +54,7 @@ export interface UserProfile {
   discipline: 'Dressage' | 'Show Jumping' | 'Eventing' | 'Leisure';
   goals: string;
   avatarUrl?: string;
+  language: Language;
 }
 
 export type AppState = 'dashboard' | 'analyze' | 'history' | 'training-plan' | 'settings';

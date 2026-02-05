@@ -7,14 +7,15 @@ import History from './components/History';
 import AnalysisDisplay from './components/AnalysisDisplay';
 import Settings from './components/Settings';
 import TrainingPlanBuilder from './components/TrainingPlanBuilder';
-import { AppState, HistoryItem, AnalysisResult, UserProfile } from './types';
+import { AppState, HistoryItem, AnalysisResult, UserProfile, Language } from './types';
 
 const INITIAL_PROFILE: UserProfile = {
   name: 'Jane Doe',
   level: 'Advanced',
   horseName: 'Apollo',
   discipline: 'Dressage',
-  goals: 'Mastering the collected trot and maintaining better seat stability during lateral work.'
+  goals: 'Mastering the collected trot and maintaining better seat stability during lateral work.',
+  language: 'English'
 };
 
 const INITIAL_HISTORY: HistoryItem[] = [
@@ -38,7 +39,6 @@ const INITIAL_HISTORY: HistoryItem[] = [
           kneeAngleDeg: 110,
           verticalAlignmentScore: 88,
           backCurvatureScore: 92,
-          // Added missing kinematic scores for initial history item to satisfy AnalysisResult type
           dynamicBalanceScore: 85,
           spinalMobilityScore: 80
         }
@@ -84,19 +84,9 @@ const App: React.FC = () => {
   }, [userProfile]);
 
   const handleAnalysisComplete = (result: AnalysisResult, image: string) => {
-    const newItem: HistoryItem = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      imageUrl: image,
-      analysis: result
-    };
-    
+    const newItem: HistoryItem = { id: Date.now().toString(), date: new Date().toISOString(), imageUrl: image, analysis: result };
     setHistory(prev => [newItem, ...prev]);
     setCurrentAnalysis({ result, image });
-  };
-
-  const handleProfileUpdate = (profile: UserProfile) => {
-    setUserProfile(profile);
   };
 
   const renderContent = () => {
@@ -106,31 +96,28 @@ const App: React.FC = () => {
           result={currentAnalysis.result} 
           image={currentAnalysis.image} 
           onClose={() => setCurrentAnalysis(null)} 
+          profile={userProfile}
         />
       );
     }
 
     switch (activeState) {
-      case 'dashboard':
-        return <Dashboard history={history} profile={userProfile} />;
-      case 'analyze':
-        return <CameraView onAnalysisComplete={handleAnalysisComplete} />;
-      case 'history':
-        return <History history={history} />;
-      case 'settings':
-        return <Settings profile={userProfile} onUpdate={handleProfileUpdate} />;
-      case 'training-plan':
-        return <TrainingPlanBuilder profile={userProfile} history={history} />;
-      default:
-        return <Dashboard history={history} profile={userProfile} />;
+      case 'dashboard': return <Dashboard history={history} profile={userProfile} />;
+      case 'analyze': return <CameraView profile={userProfile} onAnalysisComplete={handleAnalysisComplete} />;
+      case 'history': return <History history={history} profile={userProfile} />;
+      case 'settings': return <Settings profile={userProfile} onUpdate={setUserProfile} />;
+      case 'training-plan': return <TrainingPlanBuilder profile={userProfile} history={history} />;
+      default: return <Dashboard history={history} profile={userProfile} />;
     }
   };
 
   return (
-    <Layout activeState={activeState} onNavigate={(state) => {
-      setActiveState(state);
-      if (state !== 'analyze') setCurrentAnalysis(null);
-    }} profile={userProfile}>
+    <Layout 
+      activeState={activeState} 
+      onNavigate={(state) => { setActiveState(state); if (state !== 'analyze') setCurrentAnalysis(null); }} 
+      onLanguageChange={(lang) => setUserProfile(prev => ({ ...prev, language: lang }))}
+      profile={userProfile}
+    >
       {renderContent()}
     </Layout>
   );

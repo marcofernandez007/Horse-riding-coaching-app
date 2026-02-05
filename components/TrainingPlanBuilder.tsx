@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { UserProfile, HistoryItem, AnalysisResult } from '../types';
+import { UserProfile, HistoryItem } from '../types';
 import { generateWorkoutPlan } from '../services/geminiService';
+import { translations } from '../services/i18n';
 
 interface TrainingPlanBuilderProps {
   profile: UserProfile;
@@ -29,6 +30,7 @@ const AVAILABLE_DRILLS: Drill[] = [
 ];
 
 const TrainingPlanBuilder: React.FC<TrainingPlanBuilderProps> = ({ profile, history }) => {
+  const t = translations[profile.language] || translations.English;
   const [selectedDrills, setSelectedDrills] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState<string | null>(null);
@@ -55,38 +57,16 @@ const TrainingPlanBuilder: React.FC<TrainingPlanBuilderProps> = ({ profile, hist
     }
   };
 
-  const resetBuilder = () => {
-    setGeneratedPlan(null);
-    setSelectedDrills([]);
-  };
-
   if (generatedPlan) {
     return (
       <div className="animate-fadeIn space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-3xl font-bold text-[#1a2e23]">Daily Training Routine</h2>
-          <button 
-            onClick={resetBuilder}
-            className="text-sm font-bold text-[#c1a062] uppercase tracking-wider hover:opacity-70 transition-all"
-          >
-            Create New Plan
-          </button>
+          <h2 className="text-3xl font-bold text-[#1a2e23]">{t.plan.daily}</h2>
+          <button onClick={() => {setGeneratedPlan(null); setSelectedDrills([]);}} className="text-sm font-bold text-[#c1a062] uppercase">{t.plan.new}</button>
         </div>
-        
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 prose prose-slate max-w-none">
-          <div className="flex items-center space-x-4 mb-8 not-prose">
-            <div className="bg-[#1a2e23] text-[#c1a062] p-3 rounded-2xl">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-[#1a2e23]">Session for {profile.horseName}</h3>
-              <p className="text-gray-500 text-sm">Personalized AI Routine • {new Date().toLocaleDateString()}</p>
-            </div>
-          </div>
-          
-          <div className="whitespace-pre-wrap text-gray-700 leading-relaxed font-normal">
-            {generatedPlan}
-          </div>
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 whitespace-pre-wrap text-gray-700 leading-relaxed">
+          <h3 className="text-xl font-bold text-[#1a2e23] mb-4">{t.plan.session} {profile.horseName}</h3>
+          {generatedPlan}
         </div>
       </div>
     );
@@ -95,94 +75,37 @@ const TrainingPlanBuilder: React.FC<TrainingPlanBuilderProps> = ({ profile, hist
   return (
     <div className="animate-fadeIn space-y-8">
       <div>
-        <h2 className="text-3xl font-bold text-[#1a2e23]">Routine Builder</h2>
-        <p className="text-gray-500">Pick up to 5 drills to generate a personalized workout for today.</p>
+        <h2 className="text-3xl font-bold text-[#1a2e23]">{t.plan.title}</h2>
+        <p className="text-gray-500">{t.plan.desc}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {AVAILABLE_DRILLS.map((drill) => {
-              const isSelected = selectedDrills.includes(drill.id);
-              return (
-                <button
-                  key={drill.id}
-                  onClick={() => toggleDrill(drill.id)}
-                  className={`text-left p-5 rounded-2xl border-2 transition-all flex flex-col justify-between group ${
-                    isSelected 
-                    ? 'border-[#c1a062] bg-[#c1a062]/5 shadow-sm' 
-                    : 'border-transparent bg-white hover:border-gray-200'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${
-                      drill.category === 'Dressage' ? 'bg-blue-50 text-blue-600' :
-                      drill.category === 'Jumping' ? 'bg-orange-50 text-orange-600' :
-                      drill.category === 'Biomechanics' ? 'bg-purple-50 text-purple-600' :
-                      'bg-green-50 text-green-600'
-                    }`}>
-                      {drill.category}
-                    </span>
-                    {isSelected && (
-                      <div className="w-5 h-5 rounded-full bg-[#c1a062] flex items-center justify-center text-white">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                      </div>
-                    )}
-                  </div>
-                  <h4 className="font-bold text-[#1a2e23] text-lg">{drill.name}</h4>
-                  <p className="text-sm text-gray-500 mt-1">{drill.description}</p>
-                </button>
-              );
-            })}
-          </div>
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {AVAILABLE_DRILLS.map((drill) => {
+            const isSelected = selectedDrills.includes(drill.id);
+            return (
+              <button key={drill.id} onClick={() => toggleDrill(drill.id)} className={`text-left p-5 rounded-2xl border-2 transition-all ${isSelected ? 'border-[#c1a062] bg-[#c1a062]/5' : 'border-transparent bg-white'}`}>
+                <h4 className="font-bold text-[#1a2e23] text-lg">{drill.name}</h4>
+                <p className="text-sm text-gray-500">{drill.description}</p>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-8">
-            <h3 className="font-bold text-lg text-[#1a2e23] mb-4">Today's Focus</h3>
-            
-            {lastAnalysis && (
-              <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <span className="text-[10px] font-bold text-[#c1a062] uppercase tracking-widest">From Last Session</span>
-                <p className="text-xs text-gray-600 mt-1 italic">"{lastAnalysis.summary}"</p>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-8 h-fit">
+          <h3 className="font-bold text-lg text-[#1a2e23] mb-4">{t.plan.focus}</h3>
+          <div className="space-y-3 mb-8">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t.plan.selected} ({selectedDrills.length}/5)</span>
+            {selectedDrills.map(id => (
+              <div key={id} className="flex justify-between text-sm py-1 border-b">
+                <span>{AVAILABLE_DRILLS.find(d => d.id === id)?.name}</span>
+                <button onClick={() => toggleDrill(id)} className="text-gray-300">&times;</button>
               </div>
-            )}
-
-            <div className="space-y-3 mb-8 min-h-[100px]">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Selected Items ({selectedDrills.length}/5)</span>
-              {selectedDrills.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">No drills selected yet.</p>
-              ) : (
-                selectedDrills.map(id => {
-                  const drill = AVAILABLE_DRILLS.find(d => d.id === id);
-                  return (
-                    <div key={id} className="flex items-center justify-between text-sm py-1 border-b border-gray-50">
-                      <span className="font-medium text-[#1a2e23]">{drill?.name}</span>
-                      <button onClick={() => toggleDrill(id)} className="text-gray-300 hover:text-red-400">&times;</button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <button
-              onClick={handleGenerate}
-              disabled={selectedDrills.length === 0 || isGenerating}
-              className="w-full bg-[#1a2e23] hover:bg-[#253f31] text-white font-bold py-4 rounded-2xl shadow-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                  <span>Generating Plan...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 text-[#c1a062]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                  <span>Build Routine</span>
-                </>
-              )}
-            </button>
+            ))}
           </div>
+          <button onClick={handleGenerate} disabled={selectedDrills.length === 0 || isGenerating} className="w-full bg-[#1a2e23] text-white font-bold py-4 rounded-2xl disabled:opacity-30">
+            {isGenerating ? t.plan.generating : t.plan.build}
+          </button>
         </div>
       </div>
     </div>

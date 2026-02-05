@@ -1,12 +1,14 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { AnalysisResult, LiveFeedback, UserProfile } from "../types";
+import { AnalysisResult, LiveFeedback, UserProfile, Language } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const SYSTEM_INSTRUCTION = `
+const getSystemInstruction = (lang: Language) => `
 You are an elite Grand Prix Dressage and Show Jumping coach with deep expertise in equine biomechanics and kinematic analysis. 
 Your task is to analyze a high-frequency sequence of image frames from a horse and rider session.
+
+IMPORTANT: You MUST provide all text feedback, summaries, and drill names in ${lang}.
 
 Because you are receiving a dense sequence of frames, you must provide a highly accurate temporal audit.
 In addition to qualitative feedback, you MUST estimate granular kinematic metrics:
@@ -17,9 +19,9 @@ RIDER METRICS:
 - Knee Angle: Stability of the lower leg.
 - Vertical Alignment: Score (0-100) on how well the ear-shoulder-hip-heel line is maintained. 
 - Back Curvature: Score (0-100) assessing the neutral spine position.
-- Spinal Mobility & Variability: Score (0-100) assessing how well the rider's spine absorbs the horse's motion. Higher score means better shock absorption and fluid motion.
+- Spinal Mobility & Variability: Score (0-100) assessing how well the rider's spine absorbs the horse's motion.
 - Shoulder Rotation: Assess upper body alignment; check for unwanted twisting or stiffness relative to the hips.
-- Dynamic Balance: Score (0-100) evaluating the rider's ability to maintain their center of gravity in sync with the horse's center of mass during movement and transitions.
+- Dynamic Balance: Score (0-100) evaluating the rider's ability to maintain their center of gravity in sync with the horse.
 
 HORSE METRICS:
 - Cadence: Estimated beats per minute (BPM) for the specific gait.
@@ -28,13 +30,13 @@ HORSE METRICS:
 
 You MUST return a JSON response matching this schema:
 {
-  "summary": "Overall impression of the pair's motion and harmony",
+  "summary": "Overall impression of the pair's motion and harmony (MUST BE IN ${lang})",
   "riderFeedback": {
-    "posture": "Detailed posture notes, specifically mentioning ear-shoulder-hip-heel alignment, shoulder rotation, and spinal fluidity.",
+    "posture": "Detailed posture notes (MUST BE IN ${lang})",
     "postureScore": 0-100,
-    "legPosition": "Specific leg position notes",
+    "legPosition": "Specific leg position notes (MUST BE IN ${lang})",
     "legScore": 0-100,
-    "handContact": "Contact and hand position notes",
+    "handContact": "Contact and hand position notes (MUST BE IN ${lang})",
     "contactScore": 0-100,
     "score": 0-100,
     "jointAngles": {
@@ -48,11 +50,11 @@ You MUST return a JSON response matching this schema:
     }
   },
   "horseFeedback": {
-    "rhythm": "Rhythm and tempo notes",
+    "rhythm": "Rhythm and tempo notes (MUST BE IN ${lang})",
     "rhythmScore": 0-100,
-    "engagement": "Hindquarter engagement notes",
+    "engagement": "Hindquarter engagement notes (MUST BE IN ${lang})",
     "engagementScore": 0-100,
-    "frame": "Neck and head carriage notes",
+    "frame": "Neck and head carriage notes (MUST BE IN ${lang})",
     "frameScore": 0-100,
     "score": 0-100,
     "gaitMetrics": {
@@ -61,17 +63,15 @@ You MUST return a JSON response matching this schema:
       "suspensionQualityScore": 0-100
     }
   },
-  "drills": ["Drill 1", "Drill 2", "Drill 3"]
+  "drills": ["Drill 1 in ${lang}", "Drill 2 in ${lang}", "Drill 3 in ${lang}"]
 }
 `;
 
-const LIVE_SYSTEM_INSTRUCTION = `
+const getLiveSystemInstruction = (lang: Language) => `
 You are a real-time equestrian coaching assistant. Provide immediate biomechanical scores and a short coaching cue.
-Analyze the provided frame for:
-- Rider Posture (balance/alignment)
-- Hand Contact (tension/elasticity)
-- Leg Position (stability/effective use)
-- Horse Head Carriage (frame/relaxation)
+Analyze the provided frame for posture, contact, leg position, and horse carriage.
+
+IMPORTANT: The coaching command "alert" MUST be in ${lang}.
 
 Response MUST be JSON:
 {
@@ -79,18 +79,20 @@ Response MUST be JSON:
   "contactScore": 0-100,
   "legScore": 0-100,
   "carriageScore": 0-100,
-  "alert": "Very short coaching command (e.g. 'Shoulders back', 'Soften hands')"
+  "alert": "Very short coaching command in ${lang} (e.g. 'Shoulders back', 'Soften hands')"
 }
 `;
 
-const PLAN_SYSTEM_INSTRUCTION = `
+const getPlanSystemInstruction = (lang: Language) => `
 You are an expert equestrian coach. Create a structured workout routine (Warm-up, Main Set, Cool-down) based on a rider's profile, their last session analysis, and their selected drills.
 Explain HOW to perform each selected drill specifically for this pair's weaknesses.
 Keep the tone professional, encouraging, and biomechanically focused.
+
+IMPORTANT: The entire plan MUST be written in ${lang}.
 Return the result in Markdown format.
 `;
 
-export const analyzeEquestrianFrame = async (base64Images: string | string[]): Promise<AnalysisResult> => {
+export const analyzeEquestrianFrame = async (base64Images: string | string[], lang: Language = 'English'): Promise<AnalysisResult> => {
   const images = Array.isArray(base64Images) ? base64Images : [base64Images];
   
   const imageParts = images.map(img => ({
@@ -105,19 +107,11 @@ export const analyzeEquestrianFrame = async (base64Images: string | string[]): P
     contents: {
       parts: [
         ...imageParts,
-        { text: `Conduct a comprehensive kinematic biomechanical audit using these ${images.length} high-frequency frames. 
-        Focus intensely on:
-        1. Horse Biomechanics: Calculate precise cadence (BPM), evaluate stride length, and assess suspension quality.
-        2. Rider Biomechanics: Provide exact joint angles (Elbow, Hip, Knee) and alignment scores. 
-        Specifically assess:
-        - Spinal curvature variability and shock absorption through the seat.
-        - Shoulder rotation and upper body independence from the seat/hands.
-        - Dynamic balance shifts and harmony with the horse's center of gravity.
-        Ensure numerical gait metrics are derived from temporal patterns observed in the frame sequence.` },
+        { text: `Conduct a comprehensive kinematic biomechanical audit using these ${images.length} frames. Provide all feedback in ${lang}.` },
       ],
     },
     config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
+      systemInstruction: getSystemInstruction(lang),
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -190,7 +184,7 @@ export const analyzeEquestrianFrame = async (base64Images: string | string[]): P
   };
 };
 
-export const getLiveFeedback = async (base64Image: string): Promise<LiveFeedback> => {
+export const getLiveFeedback = async (base64Image: string, lang: Language = 'English'): Promise<LiveFeedback> => {
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: {
@@ -204,7 +198,7 @@ export const getLiveFeedback = async (base64Image: string): Promise<LiveFeedback
       ],
     },
     config: {
-      systemInstruction: LIVE_SYSTEM_INSTRUCTION,
+      systemInstruction: getLiveSystemInstruction(lang),
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -231,14 +225,14 @@ export const generateWorkoutPlan = async (profile: UserProfile, lastAnalysis: An
     Last Session Summary: ${lastAnalysis?.summary || "No history available."}
     Selected Drills for this session: ${selectedDrills.join(', ')}
     
-    Please build a professional 45-minute structured workout plan.
+    Please build a professional 45-minute structured workout plan in ${profile.language}.
   `;
 
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: prompt,
     config: {
-      systemInstruction: PLAN_SYSTEM_INSTRUCTION,
+      systemInstruction: getPlanSystemInstruction(profile.language),
     },
   });
 
